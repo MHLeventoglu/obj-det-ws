@@ -1,0 +1,6 @@
+[submodule "models/D-FINE"]
+	path = models/D-FINE
+	url = https://github.com/Peterande/D-FINE.git
+[submodule "models/RT-DETRv4"]
+	path = models/RT-DETRv4
+	url = https://github.com/RT-DETRs/RT-DETRv4.git

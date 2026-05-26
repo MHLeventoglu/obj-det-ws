@@ -1,0 +1,6 @@
+- D-FINE M
+- RF-DETR M
+#- RT-DETRv4 M
+#- RT-DETRv2 M
+- YOLOv8/11 L
+#- FASTER R-CNN ???

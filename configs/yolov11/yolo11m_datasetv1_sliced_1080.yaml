@@ -1,0 +1,30 @@
+model: yolo11m.pt
+data: configs/yolov11/datasetv1_sliced_1080.yaml
+
+train:
+  epochs: 100
+  imgsz: 640
+  batch: 16
+  device: null
+  workers: 8
+  project: outputs/yolov11
+  name: yolo11m_datasetv1_sliced_1080
+  exist_ok: true
+  amp: true
+
+# YOLO dataset layout expected by configs/yolov11/datasetv1_sliced_1080.yaml:
+#   datasets/datasetv1_sliced_1080/yolo/
+#   ├── images/
+#   │   ├── train/
+#   │   ├── val/
+#   │   └── test/
+#   └── labels/
+#       ├── train/
+#       ├── val/
+#       └── test/
+#
+# Class order:
+#   0: arac
+#   1: insan
+#   2: uap
+#   3: uai

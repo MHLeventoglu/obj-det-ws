@@ -1,0 +1,74 @@
+__include__: [
+  './datasetv1_detection.yml',
+  '../../models/RT-DETRv4/configs/runtime.yml',
+  '../../models/RT-DETRv4/configs/base/dataloader.yml',
+  '../../models/RT-DETRv4/configs/base/optimizer.yml',
+  '../../models/RT-DETRv4/configs/base/dfine_hgnetv2.yml',
+  '../../models/RT-DETRv4/configs/base/rtv4.yml',
+]
+
+output_dir: ./outputs/rtv4_hgnetv2_m_datasetv1
+
+teacher_model:
+  type: "DINOv3TeacherModel"
+  dinov3_repo_path: dinov3/
+  dinov3_weights_path: pretrain/dinov3_vitb16_pretrain_lvd1689m.pth
+  patch_size: 16
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+RTv4:
+  backbone: HGNetv2
+
+HGNetv2:
+  name: 'B2'
+  return_idx: [1, 2, 3]
+  freeze_at: -1
+  freeze_norm: False
+  use_lab: True
+
+DFINETransformer:
+  num_layers: 4
+  eval_idx: -1
+
+HybridEncoder:
+  in_channels: [384, 768, 1536]
+  hidden_dim: 256
+  depth_mult: 0.67
+  distill_teacher_dim: 768
+
+RTv4Criterion:
+  weight_dict:
+    loss_distill: 5
+  distill_adaptive_params:
+    enabled: True
+    rho: 3.5
+    delta: 0.25
+    default_weight: 15
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*bn).*$'
+      lr: 0.00004
+    -
+      params: '^(?=.*(?:norm|bn)).*$'
+      weight_decay: 0.
+
+  lr: 0.0004
+  betas: [0.9, 0.999]
+  weight_decay: 0.0001
+
+epoches: 102
+flat_epoch: 49
+no_aug_epoch: 12
+
+train_dataloader:
+  dataset:
+    transforms:
+      policy:
+        epoch: [4, 49, 90]
+  collate_fn:
+    mixup_epochs: [4, 49]
+    stop_epoch: 90

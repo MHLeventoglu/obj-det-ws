@@ -1,0 +1,10 @@
+path: ../../datasets/datasetv1_sliced_1080/yolo
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: arac
+  1: insan
+  2: uap
+  3: uai

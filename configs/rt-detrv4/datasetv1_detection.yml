@@ -1,0 +1,50 @@
+task: detection
+
+evaluator:
+  type: CocoEvaluator
+  iou_types: ['bbox']
+
+# datasetv1 classes:
+#   0: arac
+#   1: insan
+#   2: uap
+#   3: uai
+#
+# RT-DETRv4 custom datasets use category_id values directly when
+# remap_mscoco_category is False. Keep COCO annotation category_id values in
+# the 0..3 range above.
+num_classes: 4
+class_names: ['arac', 'insan', 'uap', 'uai']
+remap_mscoco_category: False
+
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/datasetv1/train
+    ann_file: ../../datasets/datasetv1/train/train.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: True
+  num_workers: 4
+  drop_last: True
+  collate_fn:
+    type: BatchImageCollateFunction
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/datasetv1/val
+    ann_file: ../../datasets/datasetv1/val/val.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: False
+  num_workers: 4
+  drop_last: False
+  collate_fn:
+    type: BatchImageCollateFunction

@@ -1,0 +1,35 @@
+model:
+  variant: medium
+  pretrain_weights: null
+
+dataset:
+  name: datasetv1
+  dir: datasets/datasetv1/rf-detr
+  format: coco
+  classes: ['arac', 'insan', 'uap', 'uai']
+
+# RF-DETR expects a dataset directory and auto-detects the format.
+# COCO layout expected here:
+#   datasets/datasetv1/rf-detr/
+#   ├── train/
+#   │   ├── _annotations.coco.json
+#   │   └── *.jpg
+#   ├── valid/
+#   │   ├── _annotations.coco.json
+#   │   └── *.jpg
+#   └── test/
+#       ├── _annotations.coco.json
+#       └── *.jpg
+#
+# Class order:
+#   0: arac
+#   1: insan
+#   2: uap
+#   3: uai
+train:
+  epochs: 100
+  batch_size: 4
+  grad_accum_steps: 4
+  lr: 0.0001
+  output_dir: outputs/rf-detr/rfdetr_medium_datasetv1
+  device: null
