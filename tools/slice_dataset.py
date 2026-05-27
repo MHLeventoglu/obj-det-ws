@@ -81,6 +81,14 @@ def parse_crop_sizes(values: list[str]) -> list[CropSize]:
     return crop_sizes
 
 
+def resize_image(image: Image.Image, resize_size: CropSize | None) -> Image.Image:
+    if resize_size is None or image.size == (resize_size.width, resize_size.height):
+        return image
+
+    resampling = Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS
+    return image.resize((resize_size.width, resize_size.height), resampling)
+
+
 def validate_overlap(value: float, name: str) -> float:
     if value < 0.0 or value >= 1.0:
         raise ValueError(f"{name} must be in the range [0, 1). Got: {value}")
@@ -262,6 +270,7 @@ def slice_yolo_dataset(
     input_dir: Path,
     output_dir: Path,
     crop_sizes: list[CropSize],
+    resize_size: CropSize | None,
     overlap_width_ratio: float,
     overlap_height_ratio: float,
     min_area_ratio: float,
@@ -286,6 +295,7 @@ def slice_yolo_dataset(
         label_path = labels_dir / relative_image_path.with_suffix(".txt")
 
         with Image.open(image_path) as image:
+            image = resize_image(image, resize_size)
             image_width, image_height = image.size
             boxes = read_yolo_labels(label_path, image_width, image_height)
 
@@ -340,6 +350,8 @@ def slice_yolo_dataset(
     print(f"images: {image_count}")
     print(f"labels: {label_count}")
     print(f"annotations: {box_count}")
+    if resize_size is not None:
+        print(f"resize_to: {resize_size.width}x{resize_size.height}")
     print(f"output: {output_dir}")
 
 
@@ -366,11 +378,26 @@ def coco_bbox_to_annotation(annotation: dict) -> CocoAnnotation:
     )
 
 
+def scale_coco_annotation(
+    coco_annotation: CocoAnnotation,
+    scale_x: float,
+    scale_y: float,
+) -> CocoAnnotation:
+    return CocoAnnotation(
+        annotation=coco_annotation.annotation,
+        x_min=coco_annotation.x_min * scale_x,
+        y_min=coco_annotation.y_min * scale_y,
+        x_max=coco_annotation.x_max * scale_x,
+        y_max=coco_annotation.y_max * scale_y,
+    )
+
+
 def slice_coco_dataset(
     images_dir: Path,
     annotation_path: Path,
     output_dir: Path,
     crop_sizes: list[CropSize],
+    resize_size: CropSize | None,
     overlap_width_ratio: float,
     overlap_height_ratio: float,
     min_area_ratio: float,
@@ -414,8 +441,17 @@ def slice_coco_dataset(
             raise FileNotFoundError(f"Image from COCO file not found: {image_path}")
 
         with Image.open(image_path) as image:
+            source_width, source_height = image.size
+            image = resize_image(image, resize_size)
             image_width, image_height = image.size
             image_annotations = annotations_by_image_id.get(int(image_record["id"]), [])
+            if (source_width, source_height) != (image_width, image_height):
+                scale_x = image_width / source_width
+                scale_y = image_height / source_height
+                image_annotations = [
+                    scale_coco_annotation(annotation, scale_x, scale_y)
+                    for annotation in image_annotations
+                ]
 
             for crop_size in crop_sizes:
                 windows = generate_windows(
@@ -489,6 +525,8 @@ def slice_coco_dataset(
     print(f"images: {len(sliced_coco['images'])}")
     print(f"annotations: {len(sliced_coco['annotations'])}")
     print(f"categories: {len(sliced_coco['categories'])}")
+    if resize_size is not None:
+        print(f"resize_to: {resize_size.width}x{resize_size.height}")
     print(f"output: {output_dir}")
     print(f"annotations_output: {output_annotation_path}")
 
@@ -546,6 +584,14 @@ def main() -> None:
         help="Crop size as SIZE or WIDTHxHEIGHT. Can be repeated.",
     )
     parser.add_argument(
+        "--resize-to",
+        default=None,
+        help=(
+            "Resize every source image to WIDTHxHEIGHT before slicing. "
+            "YOLO labels and COCO annotations are scaled to the resized image."
+        ),
+    )
+    parser.add_argument(
         "--overlap",
         type=float,
         default=0.2,
@@ -583,6 +629,7 @@ def main() -> None:
     output_dir = Path(args.output_dir).resolve()
     annotation_path = Path(args.annotations).resolve() if args.annotations else None
     crop_sizes = parse_crop_sizes(args.crop_size)
+    resize_size = parse_crop_size(args.resize_to) if args.resize_to else None
 
     overlap_width_ratio = validate_overlap(
         args.overlap_width if args.overlap_width is not None else args.overlap,
@@ -606,6 +653,7 @@ def main() -> None:
             input_dir=input_dir,
             output_dir=output_dir,
             crop_sizes=crop_sizes,
+            resize_size=resize_size,
             overlap_width_ratio=overlap_width_ratio,
             overlap_height_ratio=overlap_height_ratio,
             min_area_ratio=args.min_area_ratio,
@@ -624,6 +672,7 @@ def main() -> None:
         annotation_path=annotation_path,
         output_dir=output_dir,
         crop_sizes=crop_sizes,
+        resize_size=resize_size,
         overlap_width_ratio=overlap_width_ratio,
         overlap_height_ratio=overlap_height_ratio,
         min_area_ratio=args.min_area_ratio,
