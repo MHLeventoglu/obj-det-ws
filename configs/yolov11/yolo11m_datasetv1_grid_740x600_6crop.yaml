@@ -1,14 +1,14 @@
 model: yolo11m.pt
-data: configs/yolov11/datasetv1_sliced_1080.yaml
+data: configs/yolov11/datasetv1_grid_740x600_6crop.yaml
 
 train:
-  epochs: 120
+  epochs: 80
   imgsz: 640
   batch: 96
   device: null
   workers: 8
   project: outputs/yolov11
-  name: yolo11m_datasetv1_sliced_1080_2crop
+  name: yolo11m_datasetv1_grid_740x600_6crop
   exist_ok: true
   amp: true
   optimizer: AdamW
@@ -18,8 +18,8 @@ train:
   warmup_epochs: 3.0
   warmup_momentum: 0.8
   cos_lr: true
-  patience: 35
-  close_mosaic: 15
+  patience: 25
+  close_mosaic: 10
   hsv_h: 0.015
   hsv_s: 0.5
   hsv_v: 0.35
@@ -34,22 +34,17 @@ train:
   mixup: 0.05
   copy_paste: 0.0
 
-# YOLO dataset layout expected by configs/yolov11/datasetv1_sliced_1080.yaml:
-#   datasets/datasetv1_sliced_1080_2crop/
-#   ├── train/
-#   │   ├── images/
-#   │   └── labels/
-#   ├── val/
-#   │   ├── images/
-#   │   └── labels/
-#   ├── test/
-#   │   ├── images/
-#   │   └── labels/
-#   └── annotations/
+# Prepared dataset zip expected locally at:
+#   datasets/datasetv1_grid_740x600_6crop/
+#   ├── train/{images,labels}
+#   ├── val/{images,labels}
+#   ├── test/{images,labels}
+#   ├── annotations/{train.json,val.json}
+#   └── data.yaml
 #
 # Rough image counts used for training schedule:
-#   train: ~18000
-#   val: ~6500
+#   train: ~54000
+#   val: ~19500
 #
 # Class order:
 #   0: arac

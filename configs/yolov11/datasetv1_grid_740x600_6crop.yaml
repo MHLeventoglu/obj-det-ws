@@ -1,4 +1,4 @@
-path: ../../datasets/datasetv1_sliced_1080_2crop
+path: ../../datasets/datasetv1_grid_740x600_6crop
 train: train/images
 val: val/images
 test: test/images

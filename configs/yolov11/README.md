@@ -8,6 +8,10 @@ Bu klasor datasetv1 icin YOLO11m egitim configlerini tutar.
 - `yolo11m_datasetv1.yaml`: YOLO11m egitim configi.
 - `datasetv1_sliced_1080.yaml`: 1080x1080 crop edilmis datasetv1 YOLO dataset tanimi.
 - `yolo11m_datasetv1_sliced_1080.yaml`: 1080x1080 crop dataset ile YOLO11m egitim configi.
+- `datasetv1_sliced_1080_2crop.yaml`: hazir 1080x1080 2-crop YOLO dataset tanimi.
+- `yolo11m_datasetv1_sliced_1080_2crop.yaml`: hazir 1080x1080 2-crop dataset ile YOLO11m egitim configi.
+- `datasetv1_grid_740x600_6crop.yaml`: hazir 740x600 6-crop YOLO dataset tanimi.
+- `yolo11m_datasetv1_grid_740x600_6crop.yaml`: hazir 740x600 6-crop dataset ile YOLO11m egitim configi.
 
 ## Dataset
 
@@ -42,18 +46,34 @@ class_id x_center y_center width height
 
 Koordinatlar normalize edilmis `0..1` araliginda olmalidir.
 
-1080x1080 crop edilmis dataset icin beklenen yerlesim:
+Hazir crop ziplerinden cikarilan datasetler icin beklenen yerlesim:
 
 ```text
-datasets/datasetv1_sliced_1080/yolo/
-├── images/
-│   ├── train/
-│   ├── val/
-│   └── test/
-└── labels/
-    ├── train/
-    ├── val/
-    └── test/
+datasets/datasetv1_sliced_1080_2crop/
+├── data.yaml
+├── annotations/
+│   ├── train.json
+│   └── val.json
+├── train/
+│   ├── images/
+│   └── labels/
+├── val/
+│   ├── images/
+│   └── labels/
+└── test/
+    ├── images/
+    └── labels/
+```
+
+740x600 6-crop dataset ayni yapiyi `datasets/datasetv1_grid_740x600_6crop/`
+altinda kullanir.
+
+Prepared zipler Drive'dan local workspace'e acilacak sekilde notebookta
+`DATASET_VARIANT` ile secilir:
+
+```text
+datasetv1_sliced_1080_2crop      train: ~18000, val: ~6500
+datasetv1_grid_740x600_6crop     train: ~54000, val: ~19500
 ```
 
 Colab uzerinden tek akista hazirlik ve egitim icin:

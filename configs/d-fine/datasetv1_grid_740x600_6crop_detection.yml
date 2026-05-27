@@ -4,19 +4,23 @@ evaluator:
   type: CocoEvaluator
   iou_types: ['bbox']
 
-# datasetv1 sliced 1080 classes:
-#   0: arac
-#   1: insan
-#   2: uap
-#   3: uai
+# Prepared dataset zip layout:
+#   datasets/datasetv1_grid_740x600_6crop/
+#   ├── train/{images,labels}
+#   ├── val/{images,labels}
+#   ├── test/{images,labels}
+#   └── annotations/{train.json,val.json}
+#
+# Rough image counts used for training schedule:
+#   train: ~54000
+#   val: ~19500
+#
+# COCO image file_name values are relative to the dataset root, for example:
+#   train/images/example__slice_740x600_x0_y0.jpg
 #
 # D-FINE custom datasets use category_id values directly when
 # remap_mscoco_category is False. Keep COCO annotation category_id values in
-# the 0..3 range above.
-#
-# Rough image counts used for training schedule:
-#   train: ~18000
-#   val: ~6500
+# the 0..3 range below.
 num_classes: 4
 class_names: ['arac', 'insan', 'uap', 'uai']
 remap_mscoco_category: False
@@ -25,8 +29,8 @@ train_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: ../../datasets/datasetv1_sliced_1080_2crop
-    ann_file: ../../datasets/datasetv1_sliced_1080_2crop/annotations/train.json
+    img_folder: ../../datasets/datasetv1_grid_740x600_6crop
+    ann_file: ../../datasets/datasetv1_grid_740x600_6crop/annotations/train.json
     return_masks: False
     transforms:
       type: Compose
@@ -41,8 +45,8 @@ val_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: ../../datasets/datasetv1_sliced_1080_2crop
-    ann_file: ../../datasets/datasetv1_sliced_1080_2crop/annotations/val.json
+    img_folder: ../../datasets/datasetv1_grid_740x600_6crop
+    ann_file: ../../datasets/datasetv1_grid_740x600_6crop/annotations/val.json
     return_masks: False
     transforms:
       type: Compose

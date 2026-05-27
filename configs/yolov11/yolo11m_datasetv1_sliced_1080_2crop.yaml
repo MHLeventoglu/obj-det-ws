@@ -1,5 +1,5 @@
 model: yolo11m.pt
-data: configs/yolov11/datasetv1_sliced_1080.yaml
+data: configs/yolov11/datasetv1_sliced_1080_2crop.yaml
 
 train:
   epochs: 120
@@ -34,18 +34,13 @@ train:
   mixup: 0.05
   copy_paste: 0.0
 
-# YOLO dataset layout expected by configs/yolov11/datasetv1_sliced_1080.yaml:
+# Prepared dataset zip expected locally at:
 #   datasets/datasetv1_sliced_1080_2crop/
-#   ├── train/
-#   │   ├── images/
-#   │   └── labels/
-#   ├── val/
-#   │   ├── images/
-#   │   └── labels/
-#   ├── test/
-#   │   ├── images/
-#   │   └── labels/
-#   └── annotations/
+#   ├── train/{images,labels}
+#   ├── val/{images,labels}
+#   ├── test/{images,labels}
+#   ├── annotations/{train.json,val.json}
+#   └── data.yaml
 #
 # Rough image counts used for training schedule:
 #   train: ~18000

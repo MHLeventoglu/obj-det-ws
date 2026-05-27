@@ -8,6 +8,10 @@ Bu klasor datasetv1 icin D-FINE M egitim configlerini tutar.
 - `dfine_hgnetv2_m_datasetv1.yml`: D-FINE M egitim configi.
 - `datasetv1_sliced_1080_detection.yml`: 1080x1080 crop edilmis datasetv1 COCO dataset tanimi.
 - `dfine_hgnetv2_m_datasetv1_sliced_1080.yml`: 1080x1080 crop dataset ile D-FINE M egitim configi.
+- `datasetv1_sliced_1080_2crop_detection.yml`: hazir 1080x1080 2-crop COCO dataset tanimi.
+- `dfine_hgnetv2_m_datasetv1_sliced_1080_2crop.yml`: hazir 1080x1080 2-crop dataset ile D-FINE M egitim configi.
+- `datasetv1_grid_740x600_6crop_detection.yml`: hazir 740x600 6-crop COCO dataset tanimi.
+- `dfine_hgnetv2_m_datasetv1_grid_740x600_6crop.yml`: hazir 740x600 6-crop dataset ile D-FINE M egitim configi.
 
 ## Dataset
 
@@ -34,16 +38,40 @@ Sinif sirasi:
 
 `remap_mscoco_category: False` kullanildigi icin COCO annotation dosyalarinda `category_id` degerleri `0..3` araliginda olmalidir.
 
-1080x1080 crop edilmis dataset icin beklenen yerlesim:
+Hazir crop ziplerinden cikarilan datasetler icin beklenen yerlesim:
 
 ```text
-datasets/datasetv1_sliced_1080/
-├── train/
+datasets/datasetv1_sliced_1080_2crop/
+├── annotations/
 │   ├── train.json
-│   └── images...
-└── val/
-    ├── val.json
-    └── images...
+│   └── val.json
+├── train/
+│   ├── images/
+│   └── labels/
+├── val/
+│   ├── images/
+│   └── labels/
+└── test/
+    ├── images/
+    └── labels/
+```
+
+COCO `file_name` degerleri dataset root'una gore relative olmalidir:
+
+```text
+train/images/example.jpg
+val/images/example.jpg
+```
+
+740x600 6-crop dataset ayni yapiyi `datasets/datasetv1_grid_740x600_6crop/`
+altinda kullanir.
+
+Prepared zipler Drive'dan local workspace'e acilacak sekilde notebookta
+`DATASET_VARIANT` ile secilir:
+
+```text
+datasetv1_sliced_1080_2crop      train: ~18000, val: ~6500
+datasetv1_grid_740x600_6crop     train: ~54000, val: ~19500
 ```
 
 Colab uzerinden tek akista hazirlik ve egitim icin:

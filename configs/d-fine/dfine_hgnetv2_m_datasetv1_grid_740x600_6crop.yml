@@ -1,14 +1,14 @@
 __include__: [
-  './datasetv1_sliced_1080_2crop_detection.yml',
+  './datasetv1_grid_740x600_6crop_detection.yml',
   '../../models/D-FINE/configs/runtime.yml',
   '../../models/D-FINE/configs/dfine/include/dataloader.yml',
   '../../models/D-FINE/configs/dfine/include/optimizer.yml',
   '../../models/D-FINE/configs/dfine/include/dfine_hgnetv2.yml',
 ]
 
-output_dir: ./output/dfine_hgnetv2_m_datasetv1_sliced_1080_2crop
+output_dir: ./output/dfine_hgnetv2_m_datasetv1_grid_740x600_6crop
 project_name: D-FINE
-exp_name: dfine_hgnetv2_m_datasetv1_sliced_1080_2crop
+exp_name: dfine_hgnetv2_m_datasetv1_grid_740x600_6crop
 
 DFINE:
   backbone: HGNetv2
@@ -47,16 +47,16 @@ optimizer:
   betas: [0.9, 0.999]
   weight_decay: 0.000125
 
-epochs: 96
+epochs: 56
 train_dataloader:
   total_batch_size: 48
   num_workers: 8
   dataset:
     transforms:
       policy:
-        epoch: 84
+        epoch: 48
   collate_fn:
-    stop_epoch: 84
+    stop_epoch: 48
     ema_restart_decay: 0.9999
     base_size_repeat: 6
 
