@@ -10,6 +10,13 @@ output_dir: ./output/dfine_hgnetv2_m_datasetv1_grid_740x600_6crop
 project_name: D-FINE
 exp_name: dfine_hgnetv2_m_datasetv1_grid_740x600_6crop
 
+# Objects365 class ids used to initialize the custom class head in dataset order:
+#   0 arac  -> Car
+#   1 insan -> Person
+#   2 uap   -> Airplane
+#   3 uai   -> Helicopter
+obj365_ids: [5, 0, 114, 263]
+
 DFINE:
   backbone: HGNetv2
 

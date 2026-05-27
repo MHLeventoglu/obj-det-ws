@@ -13,6 +13,16 @@ DEFAULT_CONFIG = "configs/d-fine/dfine_hgnetv2_m_datasetv1.yml"
 ACTION = "train"
 
 
+def ensure_obj365_mapping_patch(workspace_root: Path) -> None:
+    patch_script = workspace_root / "tools" / "patch_dfine_obj365_ids.py"
+    solver_path = workspace_root / MODEL_DIR / "src" / "solver" / "_solver.py"
+    if not patch_script.exists():
+        raise FileNotFoundError(f"D-FINE obj365 patch script not found: {patch_script}")
+    if not solver_path.exists():
+        raise FileNotFoundError(f"D-FINE solver file not found: {solver_path}")
+    subprocess.run([sys.executable, str(patch_script), str(solver_path)], check=True)
+
+
 def main() -> None:
     parser = ArgumentParser(description=f"{MODEL_NAME} {ACTION} script")
     parser.add_argument("--config", default=DEFAULT_CONFIG, help="Path to YAML config file.")
@@ -84,6 +94,7 @@ def main() -> None:
     if args.dry_run:
         return
 
+    ensure_obj365_mapping_patch(workspace_root)
     subprocess.run(command, cwd=model_path, env=env, check=True)
 
 

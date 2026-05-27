@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
+import os
 from pathlib import Path
 from pprint import pformat
 
@@ -40,6 +41,10 @@ def main() -> None:
     parser.add_argument("--workers", type=int, help="Override dataloader worker count.")
     parser.add_argument("--project", help="Override output project directory.")
     parser.add_argument("--name", help="Override run name.")
+    parser.add_argument("--use-wandb", action="store_true", help="Enable Ultralytics Weights & Biases logging.")
+    parser.add_argument("--wandb-project", help="Weights & Biases project name.")
+    parser.add_argument("--wandb-name", help="Weights & Biases run name.")
+    parser.add_argument("--wandb-entity", help="Weights & Biases entity/team name.")
     parser.add_argument("--dry-run", action="store_true", help="Print resolved config without running.")
     args = parser.parse_args()
 
@@ -82,9 +87,43 @@ def main() -> None:
     print(f"config: {config_path}")
     print(f"yolo_model: {model_name}")
     print(f"train_kwargs:\n{pformat(train_kwargs)}")
+    if args.use_wandb:
+        print(
+            "wandb:\n"
+            + pformat(
+                {
+                    "project": args.wandb_project,
+                    "name": args.wandb_name or train_cfg.get("name"),
+                    "entity": args.wandb_entity or None,
+                }
+            )
+        )
 
     if args.dry_run:
         return
+
+    if args.use_wandb:
+        os.environ.pop("WANDB_DISABLED", None)
+        if args.wandb_project:
+            os.environ["WANDB_PROJECT"] = args.wandb_project
+        if args.wandb_name:
+            os.environ["WANDB_NAME"] = args.wandb_name
+        if args.wandb_entity:
+            os.environ["WANDB_ENTITY"] = args.wandb_entity
+
+        from ultralytics.utils import SETTINGS
+
+        SETTINGS.update({"wandb": True})
+
+        import wandb
+
+        if not wandb.run:
+            wandb.init(
+                project=args.wandb_project,
+                name=args.wandb_name or train_cfg.get("name"),
+                entity=args.wandb_entity or None,
+                config=train_kwargs,
+            )
 
     from ultralytics import YOLO
 
