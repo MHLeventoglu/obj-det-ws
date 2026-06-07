@@ -1,6 +1,6 @@
 # D-FINE Training
 
-Bu klasor datasetv1 icin D-FINE M egitim configlerini tutar.
+Bu klasor D-FINE egitim dataset ve model configlerini tutar.
 
 ## Configler
 
@@ -12,6 +12,8 @@ Bu klasor datasetv1 icin D-FINE M egitim configlerini tutar.
 - `dfine_hgnetv2_m_datasetv1_sliced_1080_2crop.yml`: hazir 1080x1080 2-crop dataset ile D-FINE M egitim configi.
 - `datasetv1_grid_740x600_6crop_detection.yml`: hazir 740x600 6-crop COCO dataset tanimi.
 - `dfine_hgnetv2_m_datasetv1_grid_740x600_6crop.yml`: hazir 740x600 6-crop dataset ile D-FINE M egitim configi.
+- `plane_44k_detection.yml`: tek sinifli plane COCO dataset tanimi.
+- `dfine_hgnetv2_n_plane_44k.yml`: 44k plane dataset ile D-FINE N egitim configi.
 
 ## Dataset
 
@@ -66,6 +68,30 @@ val/images/example.jpg
 740x600 6-crop dataset ayni yapiyi `datasets/datasetv1_grid_740x600_6crop/`
 altinda kullanir.
 
+Plane dataset icin beklenen yerlesim:
+
+```text
+datasets/plane_44k/
+├── annotations/
+│   ├── train.json
+│   └── val.json
+├── train/
+│   ├── images/
+│   └── labels/
+└── val/
+    ├── images/
+    └── labels/
+```
+
+Plane COCO annotation dosyalarinda tek sinif `category_id: 0` olmalidir:
+
+```text
+0: plane
+```
+
+`notebooks/dfine_n_plane_44k_colab.ipynb` annotation yoksa YOLO
+label dosyalarindan bu COCO JSON dosyalarini otomatik olusturur.
+
 Prepared zipler Drive'dan local workspace'e acilacak sekilde notebookta
 `DATASET_VARIANT` ile secilir:
 
@@ -78,6 +104,7 @@ Colab uzerinden tek akista hazirlik ve egitim icin:
 
 ```text
 notebooks/dfine_m_1080_sliced_colab.ipynb
+notebooks/dfine_n_plane_44k_colab.ipynb
 ```
 
 Notebook varsayilanlari tek 40GB A100 icin ayarlanmistir:
@@ -85,6 +112,16 @@ Notebook varsayilanlari tek 40GB A100 icin ayarlanmistir:
 ```text
 train total_batch_size: 32
 val total_batch_size: 64
+num_workers: 8
+```
+
+D-FINE N plane notebook varsayilanlari:
+
+```text
+pretrained: dfine_n_obj2coco.pth
+epochs: 72
+train total_batch_size: 64
+val total_batch_size: 128
 num_workers: 8
 ```
 

@@ -1,0 +1,56 @@
+task: detection
+
+evaluator:
+  type: CocoEvaluator
+  iou_types: ['bbox']
+
+# Single-class plane dataset:
+#   0: plane
+#
+# D-FINE custom datasets use category_id values directly when
+# remap_mscoco_category is False. Keep COCO annotation category_id values at 0.
+#
+# Expected local layout after the Colab notebook extracts the Drive zip:
+#   datasets/dataset_2026_01/
+#   ├── annotations/{train_coco.json,val_coco.json}
+#   ├── train/{images,labels}
+#   └── val/{images,labels}
+#
+# COCO image file_name values are relative to the split image folder, for example:
+#   example.jpg
+#   nested/example.jpg
+num_classes: 1
+class_names: ['plane']
+remap_mscoco_category: False
+
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/dataset_2026_01/train/images
+    ann_file: ../../datasets/dataset_2026_01/annotations/train_coco.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: True
+  num_workers: 4
+  drop_last: True
+  collate_fn:
+    type: BatchImageCollateFunction
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/dataset_2026_01/val/images
+    ann_file: ../../datasets/dataset_2026_01/annotations/val_coco.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: False
+  num_workers: 4
+  drop_last: False
+  collate_fn:
+    type: BatchImageCollateFunction
