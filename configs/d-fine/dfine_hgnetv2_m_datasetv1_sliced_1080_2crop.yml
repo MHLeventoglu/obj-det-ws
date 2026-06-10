@@ -54,16 +54,16 @@ optimizer:
   betas: [0.9, 0.999]
   weight_decay: 0.000125
 
-epochs: 96
+epochs: 150
 train_dataloader:
   total_batch_size: 48
   num_workers: 8
   dataset:
     transforms:
       policy:
-        epoch: 84
+        epoch: 138
   collate_fn:
-    stop_epoch: 84
+    stop_epoch: 138
     ema_restart_decay: 0.9999
     base_size_repeat: 6
 

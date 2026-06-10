@@ -118,7 +118,7 @@ num_workers: 8
 D-FINE N plane notebook varsayilanlari:
 
 ```text
-pretrained: dfine_n_obj2coco.pth
+pretrained: dfine_n_coco.pth
 epochs: 72
 train total_batch_size: 64
 val total_batch_size: 128

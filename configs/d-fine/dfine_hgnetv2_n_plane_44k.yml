@@ -10,14 +10,13 @@ output_dir: ./output/dfine_hgnetv2_n_plane_44k
 project_name: D-FINE
 exp_name: dfine_hgnetv2_n_plane_44k
 
-# The default Colab notebook tunes from dfine_n_obj2coco.pth.
+# The default Colab notebook tunes from dfine_n_coco.pth.
 # The checkpoint head is in COCO class order; COCO class id 4 is airplane.
 pretrain_class_ids: [4]
 pretrain_class_id_offset: 0
 
-# If you tune from a pure Objects365 checkpoint instead, set
-# pretrain_class_ids: [114] and pretrain_class_id_offset: 1, or remove the
-# COCO pretrain_class_ids override above so the fallback obj365_ids is used.
+# D-FINE-N does not publish an Objects365/Objects365+COCO checkpoint in the
+# upstream model zoo. Keep the COCO mapping above unless using your own N checkpoint.
 obj365_ids: [114]
 
 DFINE:
