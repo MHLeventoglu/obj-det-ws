@@ -1,0 +1,28 @@
+__include__: [
+  './datasetv1_grid_740x600_6crop_detection.yml',
+  '../../models/RT-DETR/rtdetrv2_pytorch/configs/runtime.yml',
+  '../../models/RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/dataloader.yml',
+  '../../models/RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/optimizer.yml',
+  '../../models/RT-DETR/rtdetrv2_pytorch/configs/rtdetrv2/include/rtdetrv2_r50vd.yml',
+]
+
+# RT-DETRv2-L: ResNet-50-vd backbone, 42M params, 53.4 AP on COCO val.
+# Pretrained from COCO, fine-tuned on datasetv1_grid_740x600_6crop (4 classes).
+output_dir: ./output/rtdetrv2_r50vd_l_datasetv1_grid_740x600_6crop
+
+# RTDETRv2 uses "epoches" (original typo in upstream code).
+epoches: 150
+
+train_dataloader:
+  dataset:
+    transforms:
+      policy:
+        epoch: 138  # stop heavy augmentation; no-aug fine-tune tail: epochs [138, 150)
+  collate_fn:
+    stop_epoch: 138  # stop multi-scale resizing at the same epoch
+  total_batch_size: 32
+  num_workers: 8
+
+val_dataloader:
+  total_batch_size: 48
+  num_workers: 8
