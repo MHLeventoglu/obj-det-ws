@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Kullanim:
 #
-#   Standart degerlendirme (D-FINE'in kendi train.py --test-only akisi):
+#   Standart degerlendirme (D-FINE'in kendi tam-goruntu evaluate() akisi):
 #     python scripts/d-fine/test.py --resume output/dfine_.../best_stg2.pth \
 #         -images datasets/datasetv1/val -ann datasets/datasetv1/val/val.json
 #
@@ -25,12 +25,11 @@
 # klasor yapisi varsaymaz. Ek D-FINE config override'lari icin --update
 # key=value seklinde gecilebilir (orn. --update val_dataloader.total_batch_size=8).
 #
-# Cikti metrikleri: precision, recall, f1, iou (D-FINE Validator, conf/IoU=0.5)
-# ve mAP50:95, mAP50, mAP75, AR@1/10/100 (COCOeval) - hem standart hem sliced
-# modda ayni formatta basilir.
+# Cikti metrikleri: precision, recall, f1, iou (D-FINE Validator, conf/IoU=0.5),
+# mAP50:95, mAP50, mAP75, AR@1/10/100 (COCOeval) ve sinif bazinda precision,
+# recall, mAP50, mAP50:95 (faster-coco-eval extended_metrics) - hem standart
+# hem sliced modda ayni formatta basilir.
 import os
-import shlex
-import subprocess
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -116,52 +115,6 @@ def resolve_dataset_paths(args, workspace_root: Path) -> tuple[Path, Path]:
     return img_folder, ann_file
 
 
-def run_standard_eval(args, workspace_root: Path, config_path: Path, model_path: Path) -> None:
-    train_entrypoint = model_path / "train.py"
-    if not train_entrypoint.exists():
-        raise FileNotFoundError(f"D-FINE train.py not found: {train_entrypoint}")
-
-    img_folder, ann_file = resolve_dataset_paths(args, workspace_root)
-
-    updates = [
-        *args.update,
-        f"val_dataloader.dataset.img_folder={img_folder}",
-        f"val_dataloader.dataset.ann_file={ann_file}",
-    ]
-
-    command = [
-        sys.executable,
-        "train.py",
-        "-c",
-        str(config_path),
-        "-r",
-        args.resume,
-        "--test-only",
-        "--update",
-        *updates,
-    ]
-
-    env = os.environ.copy()
-    if args.devices:
-        env["CUDA_VISIBLE_DEVICES"] = args.devices
-
-    print(f"model: {MODEL_NAME}")
-    print(f"action: {ACTION}")
-    print(f"config: {config_path}")
-    print(f"resume: {args.resume}")
-    print(f"workdir: {model_path}")
-    print(f"val_images: {img_folder}")
-    print(f"val_ann: {ann_file}")
-    if args.devices:
-        print(f"CUDA_VISIBLE_DEVICES: {args.devices}")
-    print(f"command: {shlex.join(command)}")
-
-    if args.dry_run:
-        return
-
-    subprocess.run(command, cwd=model_path, env=env, check=True)
-
-
 def infer_eval_size(yaml_cfg: dict) -> int:
     ops = yaml_cfg.get("val_dataloader", {}).get("dataset", {}).get("transforms", {}).get("ops", [])
     for op in ops:
@@ -170,6 +123,80 @@ def infer_eval_size(yaml_cfg: dict) -> int:
             if size:
                 return int(size[0])
     return DEFAULT_EVAL_SIZE
+
+
+def print_class_wise_metrics(coco_eval) -> None:
+    metrics = coco_eval.extended_metrics
+    print("Class-wise mAP:")
+    print(f"{'class':<15}{'precision':>12}{'recall':>12}{'mAP50':>12}{'mAP50:95':>12}")
+    for row in metrics["class_map"]:
+        print(
+            f"{row['class']:<15}{row['precision']:>12.4f}{row['recall']:>12.4f}"
+            f"{row['map@50']:>12.4f}{row['map@50:95']:>12.4f}"
+        )
+
+
+def build_solver(args, config_path: Path, model_path: Path, img_folder: Path, ann_file: Path):
+    sys.path.insert(0, str(model_path))
+    os.chdir(model_path)
+
+    from src.core import YAMLConfig, yaml_utils
+    from src.misc import dist_utils
+    from src.solver import TASKS
+
+    dist_utils.setup_distributed()
+
+    update_dict = yaml_utils.parse_cli(args.update)
+    update_dict = yaml_utils.merge_dict(
+        update_dict,
+        {"val_dataloader": {"dataset": {"img_folder": str(img_folder), "ann_file": str(ann_file)}}},
+    )
+
+    cfg = YAMLConfig(str(config_path), resume=str(args.resume), **update_dict)
+    if "HGNetv2" in cfg.yaml_cfg:
+        cfg.yaml_cfg["HGNetv2"]["pretrained"] = False
+
+    solver = TASKS[cfg.yaml_cfg["task"]](cfg)
+    solver.eval()
+    return solver
+
+
+def run_standard_eval(args, workspace_root: Path, config_path: Path, model_path: Path) -> None:
+    img_folder, ann_file = resolve_dataset_paths(args, workspace_root)
+
+    print(f"model: {MODEL_NAME}")
+    print(f"action: {ACTION}")
+    print(f"config: {config_path}")
+    print(f"resume: {args.resume}")
+    print(f"workdir: {model_path}")
+    print(f"val_images: {img_folder}")
+    print(f"val_ann: {ann_file}")
+
+    if args.dry_run:
+        return
+
+    if args.devices:
+        os.environ["CUDA_VISIBLE_DEVICES"] = args.devices
+
+    solver = build_solver(args, config_path, model_path, img_folder, ann_file)
+
+    from src.misc import dist_utils
+    from src.solver.det_engine import evaluate
+
+    module = solver.ema.module if solver.ema else solver.model
+    _, coco_evaluator = evaluate(
+        module,
+        solver.criterion,
+        solver.postprocessor,
+        solver.val_dataloader,
+        solver.evaluator,
+        solver.device,
+        epoch=-1,
+        use_wandb=False,
+    )
+
+    print_class_wise_metrics(coco_evaluator.coco_eval["bbox"])
+    dist_utils.cleanup()
 
 
 def run_sliced_eval(args, workspace_root: Path, config_path: Path, model_path: Path) -> None:
@@ -200,28 +227,10 @@ def run_sliced_eval(args, workspace_root: Path, config_path: Path, model_path: P
     if args.devices:
         os.environ["CUDA_VISIBLE_DEVICES"] = args.devices
 
-    sys.path.insert(0, str(model_path))
-    os.chdir(model_path)
+    solver = build_solver(args, config_path, model_path, img_folder, ann_file)
 
-    from src.core import YAMLConfig, yaml_utils
     from src.misc import dist_utils
-    from src.solver import TASKS
     from src.solver.validator import Validator
-
-    dist_utils.setup_distributed()
-
-    update_dict = yaml_utils.parse_cli(args.update)
-    update_dict = yaml_utils.merge_dict(
-        update_dict,
-        {"val_dataloader": {"dataset": {"img_folder": str(img_folder), "ann_file": str(ann_file)}}},
-    )
-
-    cfg = YAMLConfig(str(config_path), resume=str(args.resume), **update_dict)
-    if "HGNetv2" in cfg.yaml_cfg:
-        cfg.yaml_cfg["HGNetv2"]["pretrained"] = False
-
-    solver = TASKS[cfg.yaml_cfg["task"]](cfg)
-    solver.eval()
 
     device = solver.device
     model = solver.ema.module if solver.ema else solver.model
@@ -229,7 +238,7 @@ def run_sliced_eval(args, workspace_root: Path, config_path: Path, model_path: P
     postprocessor = solver.postprocessor
     evaluator = solver.evaluator
 
-    eval_size = args.eval_size or infer_eval_size(cfg.yaml_cfg)
+    eval_size = args.eval_size or infer_eval_size(solver.cfg.yaml_cfg)
     print(f"eval_size: {eval_size}x{eval_size}")
 
     slice_size = parse_crop_size(args.slice_size)
@@ -318,6 +327,7 @@ def run_sliced_eval(args, workspace_root: Path, config_path: Path, model_path: P
 
     metrics = Validator(gt_list, preds_list).compute_metrics()
     print("Metrics:", metrics)
+    print_class_wise_metrics(evaluator.coco_eval["bbox"])
 
     dist_utils.cleanup()
 
