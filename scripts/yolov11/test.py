@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # Kullanim:
 #
-#   Standart (full-image) degerlendirme:
+#   Standart (full-image) degerlendirme - COCO annotation dosyasi ile:
 #     python scripts/yolov11/test.py \
 #         --model runs/detect/train/weights/best.pt \
 #         -images /path/to/images -ann /path/to/annotations_coco.json
+#
+#   Ayni sey, YOLO formatinda labels/ klasoru ile (class_id x y w h, .txt):
+#     python scripts/yolov11/test.py \
+#         --model runs/detect/train/weights/best.pt \
+#         -images /path/to/images -ann /path/to/labels
 #
 #   SAHI benzeri dilimli (cropped) inference ile degerlendirme:
 #     python scripts/yolov11/test.py \
@@ -16,9 +21,12 @@
 #     python scripts/yolov11/test.py --model ... -images ... -ann ... --dry-run
 #
 # --model, -images ve -ann her zaman zorunludur; script herhangi bir dataset
-# klasor yapisi varsaymaz (annotations_coco.json + duz bir goruntu klasoru
-# yeterlidir). --config yalnizca --imgsz icin varsayilan degeri okumakta
-# kullanilir.
+# klasor yapisi varsaymaz. -ann bir .json dosyasi ise COCO annotation olarak,
+# bir klasor ise icindeki .txt dosyalari YOLO-format label olarak okunur
+# (goruntu dosya adiyla ayni relative yoldaki <ad>.txt eslestirilir). YOLO
+# formatinda sinif sirasi varsayilani datasetv1 kalibidir (arac, insan, uap,
+# uai); farkli bir sinif sirasi icin --classes kullanilabilir. --config
+# yalnizca --imgsz icin varsayilan degeri okumakta kullanilir.
 #
 # Cikti metrikleri: standart COCOeval ozeti (AP, AP50, AP75, AR@1/10/100) ve
 # sinif bazinda precision, recall, mAP50, mAP50:95 tablosu (faster-coco-eval
@@ -32,6 +40,7 @@ DEFAULT_CONFIG = "configs/yolov11/yolo11m_datasetv1.yaml"
 ACTION = "test"
 DEFAULT_IMGSZ = 640
 DEFAULT_SLICE_SIZE = "1080"
+DEFAULT_CLASS_NAMES = ["arac", "insan", "uap", "uai"]
 
 
 def parse_args():
@@ -43,7 +52,24 @@ def parse_args():
     )
     parser.add_argument("--model", required=True, help="Path to trained YOLO checkpoint (.pt) to evaluate.")
     parser.add_argument("-images", dest="val_images", required=True, help="Image folder to evaluate against.")
-    parser.add_argument("-ann", dest="val_ann", required=True, help="COCO annotation file to evaluate against.")
+    parser.add_argument(
+        "-ann",
+        dest="val_ann",
+        required=True,
+        help=(
+            "Ground truth to evaluate against: a COCO annotation .json file, or a directory "
+            "of YOLO-format .txt labels (class_id x_center y_center width height, normalized)."
+        ),
+    )
+    parser.add_argument(
+        "--classes",
+        nargs="+",
+        help=(
+            "Class names in class_id order, only used when -ann is a YOLO labels directory. "
+            "Also accepts a single comma-separated string. Defaults to the datasetv1 order: "
+            f"{', '.join(DEFAULT_CLASS_NAMES)}."
+        ),
+    )
     parser.add_argument("--imgsz", type=int, help="Model input size. Defaults to the config's train.imgsz.")
     parser.add_argument("--conf", type=float, default=0.001, help="Confidence threshold for predictions.")
     parser.add_argument("--iou", type=float, default=0.7, help="NMS IoU threshold used by YOLO's own per-inference NMS.")
@@ -105,16 +131,85 @@ def resolve_dataset_paths(args, workspace_root: Path) -> tuple[Path, Path]:
     if not img_folder.is_absolute():
         img_folder = workspace_root / img_folder
 
-    ann_file = Path(args.val_ann)
-    if not ann_file.is_absolute():
-        ann_file = workspace_root / ann_file
+    ann_path = Path(args.val_ann)
+    if not ann_path.is_absolute():
+        ann_path = workspace_root / ann_path
 
     if not img_folder.is_dir():
         raise FileNotFoundError(f"Image folder not found: {img_folder}")
-    if not ann_file.is_file():
-        raise FileNotFoundError(f"Annotation file not found: {ann_file}")
+    if not ann_path.exists():
+        raise FileNotFoundError(f"Annotation path not found: {ann_path}")
 
-    return img_folder, ann_file
+    return img_folder, ann_path
+
+
+def parse_classes(class_args: list[str] | None) -> list[str]:
+    if not class_args:
+        return DEFAULT_CLASS_NAMES
+    if len(class_args) == 1 and "," in class_args[0]:
+        return [name.strip() for name in class_args[0].split(",") if name.strip()]
+    return class_args
+
+
+def build_coco_gt(img_folder: Path, ann_path: Path, class_names: list[str]):
+    from faster_coco_eval import COCO
+
+    if ann_path.is_file():
+        return COCO(str(ann_path))
+
+    from tools.yolo_to_coco import iter_images, yolo_box_to_coco
+    from PIL import Image
+
+    categories = [{"id": idx, "name": name} for idx, name in enumerate(class_names)]
+    coco_dict = {"images": [], "annotations": [], "categories": categories}
+
+    annotation_id = 1
+    image_id = 1
+    for image_path in iter_images(img_folder):
+        relative_image_path = image_path.relative_to(img_folder)
+        label_path = ann_path / relative_image_path.with_suffix(".txt")
+
+        with Image.open(image_path) as image:
+            image_width, image_height = image.size
+
+        coco_dict["images"].append(
+            {
+                "id": image_id,
+                "file_name": relative_image_path.as_posix(),
+                "width": image_width,
+                "height": image_height,
+            }
+        )
+
+        if label_path.exists():
+            with label_path.open("r", encoding="utf-8") as handle:
+                for line_number, line in enumerate(handle, start=1):
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    parts = stripped.split()
+                    if len(parts) != 5:
+                        raise ValueError(
+                            f"Invalid YOLO row at {label_path}:{line_number}. "
+                            "Expected: class_id x_center y_center width height"
+                        )
+                    class_id = int(parts[0])
+                    bbox = yolo_box_to_coco([float(v) for v in parts[1:]], image_width, image_height)
+                    coco_dict["annotations"].append(
+                        {
+                            "id": annotation_id,
+                            "image_id": image_id,
+                            "category_id": class_id,
+                            "bbox": bbox,
+                            "area": bbox[2] * bbox[3],
+                            "iscrowd": 0,
+                        }
+                    )
+                    annotation_id += 1
+
+        image_id += 1
+
+    return COCO(coco_dict)
 
 
 def main() -> None:
@@ -125,7 +220,8 @@ def main() -> None:
     if not config_path.is_absolute():
         config_path = workspace_root / config_path
 
-    img_folder, ann_file = resolve_dataset_paths(args, workspace_root)
+    img_folder, ann_path = resolve_dataset_paths(args, workspace_root)
+    class_names = parse_classes(args.classes)
     imgsz = args.imgsz or load_default_imgsz(config_path)
     overlap_width = args.overlap_width if args.overlap_width is not None else args.overlap
     overlap_height = args.overlap_height if args.overlap_height is not None else args.overlap
@@ -134,7 +230,10 @@ def main() -> None:
     print(f"action: {ACTION}{' (sliced)' if args.sliced else ''}")
     print(f"weights: {args.model}")
     print(f"images: {img_folder}")
-    print(f"annotations: {ann_file}")
+    if ann_path.is_dir():
+        print(f"labels: {ann_path} (YOLO format, classes={class_names})")
+    else:
+        print(f"annotations: {ann_path}")
     print(f"imgsz: {imgsz}")
     print(f"conf: {args.conf}  iou: {args.iou}  max_det: {args.max_det}")
     if args.sliced:
@@ -150,7 +249,6 @@ def main() -> None:
     import torch
     import torchvision
     from PIL import Image
-    from faster_coco_eval import COCO
     from faster_coco_eval.utils.pytorch import FasterCocoEvaluator
     from ultralytics import YOLO
 
@@ -159,7 +257,7 @@ def main() -> None:
 
     model = YOLO(args.model)
 
-    coco_gt = COCO(str(ann_file))
+    coco_gt = build_coco_gt(img_folder, ann_path, class_names)
     evaluator = FasterCocoEvaluator(coco_gt, iou_types=["bbox"])
 
     slice_size = parse_crop_size(args.slice_size) if args.sliced else None
@@ -168,6 +266,7 @@ def main() -> None:
     if args.device:
         predict_kwargs["device"] = args.device
 
+    predictions = {}
     image_ids = coco_gt.getImgIds()
     for n, image_id in enumerate(image_ids, start=1):
         image_info = coco_gt.loadImgs(image_id)[0]
@@ -207,11 +306,17 @@ def main() -> None:
             keep = torchvision.ops.batched_nms(boxes, scores, labels, args.nms_iou)
             boxes, scores, labels = boxes[keep], scores[keep], labels[keep]
 
-        evaluator.update({image_id: {"boxes": boxes.cpu(), "scores": scores.cpu(), "labels": labels.cpu()}})
+        predictions[image_id] = {"boxes": boxes.cpu(), "scores": scores.cpu(), "labels": labels.cpu()}
 
         if n % 10 == 0 or n == len(image_ids):
             slice_note = f"{len(windows)} slice" + ("s" if len(windows) != 1 else "")
             print(f"[{n}/{len(image_ids)}] {image_info['file_name']} ({slice_note})")
+
+    # A single update() call is required (rather than one per image): FasterCocoEvaluator.update()
+    # replaces self.coco_eval[...].cocoDt on every call instead of merging, so extended_metrics()'s
+    # per-class precision/recall (which reads cocoDt directly) would otherwise only reflect the last
+    # image processed - collapsing to a near-empty table whenever that image had few/no detections.
+    evaluator.update(predictions)
 
     evaluator.synchronize_between_processes()
     evaluator.accumulate()
