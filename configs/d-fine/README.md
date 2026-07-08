@@ -12,6 +12,8 @@ Bu klasor D-FINE egitim dataset ve model configlerini tutar.
 - `dfine_hgnetv2_m_datasetv1_sliced_1080_2crop.yml`: hazir 1080x1080 2-crop dataset ile D-FINE M egitim configi.
 - `datasetv1_grid_740x600_6crop_detection.yml`: hazir 740x600 6-crop COCO dataset tanimi.
 - `dfine_hgnetv2_m_datasetv1_grid_740x600_6crop.yml`: hazir 740x600 6-crop dataset ile D-FINE M egitim configi.
+- `datasetv2_2crop_detection.yml`: hazir datasetv2 2-crop COCO dataset tanimi.
+- `dfine_hgnetv2_m_datasetv2_2crop.yml`: hazir datasetv2 2-crop dataset ile D-FINE M egitim configi.
 - `plane_44k_detection.yml`: tek sinifli plane COCO dataset tanimi.
 - `dfine_hgnetv2_n_plane_44k.yml`: 44k plane dataset ile D-FINE N egitim configi.
 
@@ -68,6 +70,22 @@ val/images/example.jpg
 740x600 6-crop dataset ayni yapiyi `datasets/datasetv1_grid_740x600_6crop/`
 altinda kullanir.
 
+datasetv2 2-crop dataset icin beklenen yerlesim biraz farklidir (test split
+yok, annotation dosya adlari `annotations_train.json` / `annotations_val.json`):
+
+```text
+datasets/datasetv2_2crop/
+├── annotations/
+│   ├── annotations_train.json
+│   └── annotations_val.json
+├── train/
+│   ├── images/
+│   └── labels/
+└── val/
+    ├── images/
+    └── labels/
+```
+
 Plane dataset icin beklenen yerlesim:
 
 ```text
@@ -98,6 +116,7 @@ Prepared zipler Drive'dan local workspace'e acilacak sekilde notebookta
 ```text
 datasetv1_sliced_1080_2crop      train: ~18000, val: ~6500
 datasetv1_grid_740x600_6crop     train: ~54000, val: ~19500
+datasetv2_2crop                  train: ~22140 (approximate, val count unknown)
 ```
 
 Colab uzerinden tek akista hazirlik ve egitim icin:

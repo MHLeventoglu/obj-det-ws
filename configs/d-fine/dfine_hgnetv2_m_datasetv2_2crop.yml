@@ -1,0 +1,78 @@
+__include__: [
+  './datasetv2_2crop_detection.yml',
+  '../../models/D-FINE/configs/runtime.yml',
+  '../../models/D-FINE/configs/dfine/include/dataloader.yml',
+  '../../models/D-FINE/configs/dfine/include/optimizer.yml',
+  '../../models/D-FINE/configs/dfine/include/dfine_hgnetv2.yml',
+]
+
+output_dir: ./output/dfine_hgnetv2_m_datasetv2_2crop
+project_name: D-FINE
+exp_name: dfine_hgnetv2_m_datasetv2_2crop
+
+# Objects365 class ids used to initialize the custom class head in dataset order:
+#   0 arac  -> Car
+#   1 insan -> Person
+#   2 uap   -> Airplane
+#   3 uai   -> Helicopter
+obj365_ids: [5, 0, 114, 263]
+
+DFINE:
+  backbone: HGNetv2
+
+HGNetv2:
+  name: 'B2'
+  return_idx: [1, 2, 3]
+  freeze_at: -1
+  freeze_norm: False
+  use_lab: True
+
+DFINETransformer:
+  num_layers: 4
+  eval_idx: -1
+
+HybridEncoder:
+  in_channels: [384, 768, 1536]
+  hidden_dim: 256
+  depth_mult: 0.67
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.000025
+    -
+      params: '^(?=.*backbone)(?=.*norm|bn).*$'
+      lr: 0.000025
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn|bias)).*$'
+      weight_decay: 0.
+
+  lr: 0.00025
+  betas: [0.9, 0.999]
+  weight_decay: 0.000125
+
+epochs: 190
+train_dataloader:
+  total_batch_size: 192
+  num_workers: 8
+  dataset:
+    transforms:
+      policy:
+        epoch: 178
+  collate_fn:
+    stop_epoch: 178
+    ema_restart_decay: 0.9999
+    base_size_repeat: 6
+
+val_dataloader:
+  total_batch_size: 128
+  num_workers: 8
+
+ema:
+  warmups: 0
+
+lr_warmup_scheduler:
+  warmup_duration: 0
