@@ -27,7 +27,7 @@ train_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: ../../datasets/datasetv2_2crop
+    img_folder: ../../datasets/datasetv2_2crop/train/images
     ann_file: ../../datasets/datasetv2_2crop/annotations/annotations_train.json
     return_masks: False
     transforms:
@@ -43,7 +43,7 @@ val_dataloader:
   type: DataLoader
   dataset:
     type: CocoDetection
-    img_folder: ../../datasets/datasetv2_2crop
+    img_folder: ../../datasets/datasetv2_2crop/val/images
     ann_file: ../../datasets/datasetv2_2crop/annotations/annotations_val.json
     return_masks: False
     transforms:
