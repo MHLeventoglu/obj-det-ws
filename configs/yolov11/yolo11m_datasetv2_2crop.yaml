@@ -1,0 +1,54 @@
+model: yolo11m.pt
+data: configs/yolov11/datasetv2_2crop.yaml
+
+train:
+  epochs: 115
+  imgsz: 640
+  batch: 96
+  device: null
+  workers: 8
+  project: outputs/yolov11
+  name: yolo11m_datasetv2_2crop
+  exist_ok: true
+  amp: true
+  optimizer: AdamW
+  lr0: 0.001
+  lrf: 0.01
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+  warmup_momentum: 0.8
+  cos_lr: true
+  patience: 32
+  close_mosaic: 14
+  hsv_h: 0.015
+  hsv_s: 0.5
+  hsv_v: 0.35
+  degrees: 5.0
+  translate: 0.1
+  scale: 0.4
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  mosaic: 1.0
+  mixup: 0.05
+  copy_paste: 0.0
+
+# Prepared dataset zip expected locally at:
+#   datasets/datasetv2_2crop/
+#   ├── train/{images,labels}
+#   ├── val/{images,labels}
+#   └── annotations/{annotations_train.json,annotations_val.json}
+#
+# Rough image count used for training schedule:
+#   train: ~22140 (approximate; val count unknown)
+#
+# Epoch/batch budget chosen to match the D-FINE equivalent config
+# (configs/d-fine/dfine_hgnetv2_m_datasetv2_2crop.yml: epochs=190, stop_epoch=178)
+# at a fixed 640px imgsz and single-A100 batch size.
+#
+# Class order:
+#   0: arac
+#   1: insan
+#   2: uap
+#   3: uai

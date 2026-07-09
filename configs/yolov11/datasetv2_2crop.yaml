@@ -1,0 +1,9 @@
+path: datasets/datasetv2_2crop
+train: train/images
+val: val/images
+
+names:
+  0: arac
+  1: insan
+  2: uap
+  3: uai
