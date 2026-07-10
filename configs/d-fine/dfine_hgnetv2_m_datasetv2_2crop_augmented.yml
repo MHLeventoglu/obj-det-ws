@@ -1,0 +1,88 @@
+__include__: [
+  './datasetv2_2crop_augmented_detection.yml',
+  '../../models/D-FINE/configs/runtime.yml',
+  '../../models/D-FINE/configs/dfine/include/dataloader.yml',
+  '../../models/D-FINE/configs/dfine/include/optimizer.yml',
+  '../../models/D-FINE/configs/dfine/include/dfine_hgnetv2.yml',
+]
+
+output_dir: ./output/dfine_hgnetv2_m_datasetv2_2crop_augmented
+project_name: D-FINE
+exp_name: dfine_hgnetv2_m_datasetv2_2crop_augmented
+
+# Objects365 class ids used to initialize the custom class head in dataset order:
+#   0 arac  -> Car
+#   1 insan -> Person
+#   2 uap   -> Airplane
+#   3 uai   -> Helicopter
+obj365_ids: [5, 0, 114, 263]
+
+DFINE:
+  backbone: HGNetv2
+
+HGNetv2:
+  name: 'B2'
+  return_idx: [1, 2, 3]
+  freeze_at: -1
+  freeze_norm: False
+  use_lab: True
+
+DFINETransformer:
+  num_layers: 4
+  eval_idx: -1
+
+HybridEncoder:
+  in_channels: [384, 768, 1536]
+  hidden_dim: 256
+  depth_mult: 0.67
+
+# Fine-tune (warm start) from the dataset_v2_2crop run's best_stg1.pth via
+# `--tuning` (weights only, no optimizer/EMA/scheduler state) instead of
+# `--resume`. LR is lowered vs. the original from-scratch schedule
+# (dfine_hgnetv2_m_datasetv2_2crop.yml) since the backbone/encoder/decoder
+# already converged on this task; a full-strength restart on the newly
+# augmented data distribution is what produced the NaN loss on the previous
+# --resume attempt.
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.00001
+    -
+      params: '^(?=.*backbone)(?=.*norm|bn).*$'
+      lr: 0.00001
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn|bias)).*$'
+      weight_decay: 0.
+
+  lr: 0.0001
+  betas: [0.9, 0.999]
+  weight_decay: 0.000125
+
+epochs: 110
+train_dataloader:
+  total_batch_size: 86
+  num_workers: 8
+  dataset:
+    transforms:
+      policy:
+        epoch: 103
+  collate_fn:
+    stop_epoch: 103
+    ema_restart_decay: 0.9999
+    base_size_repeat: 6
+
+val_dataloader:
+  total_batch_size: 96
+  num_workers: 8
+
+ema:
+  warmups: 0
+
+# Short warmup instead of the previous 0 (disabled) since the optimizer state
+# is reset from scratch here (tuning, not resume); ~1 epoch of ramp-up at
+# ~44k images / batch 86 (~510 steps/epoch).
+lr_warmup_scheduler:
+  warmup_duration: 500

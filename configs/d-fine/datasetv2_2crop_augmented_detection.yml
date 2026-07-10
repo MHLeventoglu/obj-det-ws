@@ -1,0 +1,57 @@
+task: detection
+
+evaluator:
+  type: CocoEvaluator
+  iou_types: ['bbox']
+
+# Prepared dataset zip layout (same as datasetv2_2crop, offline-augmented train split):
+#   datasets/datasetv2_2crop_augmented/
+#   ├── train/{images,labels}
+#   ├── val/{images,labels}
+#   └── annotations/{annotations_train.json,annotations_val.json}
+#
+# Rough image count used for training schedule:
+#   train: ~44000 (approximate, offline-augmented from ~22140)
+#   val: ~5325 (unchanged, augmentation only applied to train split)
+#
+# COCO image file_name values are relative to the dataset root, for example:
+#   train/images/example__slice_1080x1080_x0_y0.jpg
+#
+# D-FINE custom datasets use category_id values directly when
+# remap_mscoco_category is False. Keep COCO annotation category_id values in
+# the 0..3 range below.
+num_classes: 4
+class_names: ['arac', 'insan', 'uap', 'uai']
+remap_mscoco_category: False
+
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/datasetv2_2crop_augmented/train/images
+    ann_file: ../../datasets/datasetv2_2crop_augmented/annotations/annotations_train.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: True
+  num_workers: 4
+  drop_last: True
+  collate_fn:
+    type: BatchImageCollateFunction
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/datasetv2_2crop_augmented/val/images
+    ann_file: ../../datasets/datasetv2_2crop_augmented/annotations/annotations_val.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: False
+  num_workers: 4
+  drop_last: False
+  collate_fn:
+    type: BatchImageCollateFunction
