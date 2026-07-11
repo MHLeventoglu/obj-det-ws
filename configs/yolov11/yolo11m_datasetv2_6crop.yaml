@@ -1,4 +1,4 @@
-model:/content/drive/MyDrive/HYZ_2026/egitim-sonuclari/yolov11_runs/yolo11m_datasetv1_grid_740x600_6crop/yolo11m_datasetv1_grid_740x600_6crop/weights/best.pt
+model: /content/drive/MyDrive/HYZ_2026/egitim-sonuclari/yolov11_runs/yolo11m_datasetv1_grid_740x600_6crop/yolo11m_datasetv1_grid_740x600_6crop/weights/best.pt
 data: configs/yolov11/datasetv2_6crop.yaml
 
 train:
