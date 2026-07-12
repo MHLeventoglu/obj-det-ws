@@ -1,0 +1,10 @@
+path: datasets/datasetv3_6crop
+train: train/images
+val: val/images
+test: test/images
+
+names:
+  0: Tasit
+  1: Insan
+  2: Uap
+  3: Uai

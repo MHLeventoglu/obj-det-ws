@@ -1,0 +1,63 @@
+task: detection
+
+evaluator:
+  type: CocoEvaluator
+  iou_types: ['bbox']
+
+# Prepared dataset zip layout (see notebooks/datasetv3_6crop_prep.ipynb):
+#   datasets/datasetv3_6crop/
+#   ├── train/{images,labels}
+#   ├── val/{images,labels}
+#   └── annotations/{train.json,val.json}
+#
+# datasetv3_6crop = datasetv1 (6-crop) train kismindan %40 rastgele azaltilmis
+# + Heridal payi artirilmis (N_AUG_PER_LABEL 2->4, BG_DROP_FRAC 1/3->1/2) hali.
+# val, datasetv2_6crop ile ayni (degistirilmedi) -> Benchmark test sonuclari
+# onceki 6crop kosumlarla karsilastirilabilir kalir.
+#
+# Rough image counts used for training schedule (exact sayilar prep notebook
+# cell 9 ciktisinda dogrulanmali):
+#   train: ~47000-50000
+#   val: ~14878 (datasetv2_6crop ile ayni)
+#
+# COCO image file_name values are relative to each split's images/ folder, for
+# example: "v1__example__slice_740x600_x0_y0.jpg" or "her__example__r0c0...jpg".
+#
+# D-FINE custom datasets use category_id values directly when
+# remap_mscoco_category is False. Keep COCO annotation category_id values in
+# the 0..3 range below.
+num_classes: 4
+class_names: ['arac', 'insan', 'uap', 'uai']
+remap_mscoco_category: False
+
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/datasetv3_6crop/train/images
+    ann_file: ../../datasets/datasetv3_6crop/annotations/train.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: True
+  num_workers: 4
+  drop_last: True
+  collate_fn:
+    type: BatchImageCollateFunction
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: ../../datasets/datasetv3_6crop/val/images
+    ann_file: ../../datasets/datasetv3_6crop/annotations/val.json
+    return_masks: False
+    transforms:
+      type: Compose
+      ops: ~
+  shuffle: False
+  num_workers: 4
+  drop_last: False
+  collate_fn:
+    type: BatchImageCollateFunction
