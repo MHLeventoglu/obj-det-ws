@@ -1,0 +1,9 @@
+path: datasets/datasetv4_2crop
+train: images/train
+val: images/val
+
+names:
+  0: Tasit
+  1: Insan
+  2: Uap
+  3: Uai
